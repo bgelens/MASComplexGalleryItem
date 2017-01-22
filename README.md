@@ -1,1 +1,1 @@
-# MASComplexGalleryItem
+# Azure Stack Complex Gallery Item
