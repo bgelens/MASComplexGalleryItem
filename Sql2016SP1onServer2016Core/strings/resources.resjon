@@ -1,0 +1,4 @@
+{
+    "longSummary": "Deploys a Windows Server 2016 Core Standard server with SQL Server 2016 SP1 installed.",
+    "description": "Deploys a Windows Server 2016 Core Standard server with SQL Server 2016 SP1 installed."
+}

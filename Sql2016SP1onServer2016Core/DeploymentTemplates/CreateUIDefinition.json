@@ -1,0 +1,214 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json",
+    "handler": "Microsoft.Compute.MultiVm",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "basics": [
+            {
+                "name": "vmName",
+                "label": "Name",
+                "type": "Microsoft.Common.TextBox",
+                "constraints": {
+                    "required": true,
+                    "regex": "\\b\\w{3,15}\\b",
+                    "validationMessage": "Name lenght must be at least 3 and maximum 15 characters"
+                },
+                "defaultValue": "MySQLVM",
+                "toolTip": "ComputerName for the VM."
+            },
+            {
+                "name": "adminUsername",
+                "type": "Microsoft.Compute.UserNameTextBox",
+                "label": "Username",
+                "toolTip": "Admin username for the virtual machine.",
+                "osPlatform": "Windows"
+            },
+            {
+                "name": "adminPassword",
+                "type": "Microsoft.Compute.CredentialsCombo",
+                "label": {
+                    "password": "Password",
+                    "confirmPassword": "Confirm password"
+                },
+                "toolTip": {
+                    "password": "Admin password for the virtual machine."
+                },
+                "osPlatform": "Windows",
+                "options": {
+                    "hideConfirmation": false
+                }
+            }
+        ],
+        "steps": [
+            {
+                "name": "resourceCustomization",
+                "label": "Resource Customization",
+                "subLabel": {
+                    "preValidation": "Configure Resource Customization",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "Resource Customization",
+                "bladeSubtitle": "Configure Resource Customization",
+                "elements": [
+                    {
+                        "type": "Microsoft.Compute.SizeSelector",
+                        "name": "vmSize",
+                        "label": "Virtual Machine Size",
+                        "count": 1,
+                        "osPlatform": "Windows",
+                        "recommendedSizes": [
+                            "Standard_A2",
+                            "Standard_A3",
+                            "Standard_A4"
+                        ],
+                        "constraints": {
+                            "allowedSizes": [
+                                "Standard_A0",
+                                "Standard_A1",
+                                "Standard_A2",
+                                "Standard_A3",
+                                "Standard_A4"
+                            ]
+                        },
+                        "imageReference": {
+                            "offer": "WindowsServer",
+                            "publisher": "Microsoft",
+                            "sku": "2016-Standard-Core"
+                        }
+                    },
+                    {
+                        "type": "Microsoft.Common.TextBox",
+                        "constraints": {
+                            "regex": "^\\d+$",
+                            "validationMessage": "Value must be an integer.",
+                            "required": true
+                        },
+                        "defaultValue": "100",
+                        "name": "sqlDataDiskSize",
+                        "label": "Provide SQL Data Disk size in GB."
+                    },
+                    {
+                        "type": "Microsoft.Common.TextBox",
+                        "constraints": {
+                            "regex": "^\\d+$",
+                            "validationMessage": "Value must be an integer.",
+                            "required": true
+                        },
+                        "defaultValue": "50",
+                        "name": "sqlLogDiskSize",
+                        "label": "Provide SQL Log Disk size in GB."
+                    }
+                ]
+            },
+            {
+                "name": "sqlSettings",
+                "label": "SQL Settings",
+                "subLabel": {
+                    "preValidation": "Configure SQL Settings",
+                    "postValidation": "Done"
+                },
+                "bladeTitle": "SQL Settings",
+                "bladeSubtitle": "Configure SQL Settings",
+                "elements": [
+                    {
+                        "type": "Microsoft.Common.TextBox",
+                        "constraints": {
+                            "required": false
+                        },
+                        "label": "SQL Product key",
+                        "name": "sqlProductKey",
+                        "toolTip": "if you want to use the trial, leave empty.",
+                        "defaultValue": ""
+                    },
+                    {
+                        "type": "Microsoft.Common.DropDown",
+                        "name": "sqlFeatures",
+                        "label": "Select SQL Features",
+                        "constraints": {
+                            "allowedValues": [
+                                {
+                                    "label": "SQL Engine",
+                                    "value": "SQLENGINE"
+                                },
+                                {
+                                    "label": "Integration Services",
+                                    "value": "IS"
+                                },
+                                {
+                                    "label": "SQL Engine + IS",
+                                    "value": "SQLENGINE, IS"
+                                }
+                            ],
+                            "required": true
+                        }
+                    },
+                    {
+                        "type": "Microsoft.Common.Section",
+                        "name": "sqlEngine",
+                        "label": "SQL Engine",
+                        "visible": "[contains(steps('sqlSettings').sqlFeatures, 'SQLENGINE')]",
+                        "elements": [
+                            {
+                                "type": "Microsoft.Common.TextBox",
+                                "name": "sqlInstanceName",
+                                "label": "Instance name",
+                                "defaultValue": "MSSQLSERVER",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "(?!^[dD][eE][fF][aA][uU][lL][tT]$)(^[a-zA-Z_][0-9a-zA-Z$_]{1,15}$)",
+                                    "validationMessage": "Instance name must comply with Instance name rules."
+                                },
+                                "toolTip": "1-16 chars, can start with '_', cannot contain illigal characters (!, #, :, ;), cannot be named 'Default'"
+                            },
+                            {
+                                "type": "Microsoft.Common.TextBox",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "^\\d+$",
+                                    "validationMessage": "Value must be an integer."
+                                },
+                                "defaultValue": "1433",
+                                "name": "sqlInstancePort",
+                                "label": "Instance Port",
+                                "toolTip": "Default port is 1433"
+                            },
+                            {
+                                "type": "Microsoft.Common.OptionsGroup",
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "SQL",
+                                            "value": "SQL"
+                                        },
+                                        {
+                                            "label": "Windows",
+                                            "value": "Windows"
+                                        }
+                                    ],
+                                    "required": true
+                                },
+                                "defaultValue": "SQL",
+                                "label": "Authentication Mode",
+                                "name": "sqlAuthMode",
+                                "toolTip": "When selecting Windows, you might not be able to remote connect SSMS until the VM is joined to a domain."
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+            "adminUsername": "[basics('adminUsername')]",
+            "adminPassword": "[basics('adminPassword').password]",
+            "vmName": "[basics('vmName')]",
+            "vmSize": "[steps('resourceCustomization').vmSize]",
+            "sqlPort": "[int(steps('sqlSettings').sqlEngine.sqlInstancePort)]",
+            "sqlInstanceName": "[steps('sqlSettings').sqlEngine.sqlInstanceName]",
+            "sqlDataDiskSize": "[int(steps('resourceCustomization').sqlDataDiskSize)]",
+            "sqlLogDiskSize": "[int(steps('resourceCustomization').sqlLogDiskSize)]",
+            "sqlFeatures": "[steps('sqlSettings').sqlFeatures]",
+            "sqlAuthenticationMode": "[steps('sqlSettings').sqlEngine.sqlAuthMode]",
+            "sqlPID": "[steps('sqlSettings').sqlProductKey]"
+        }
+    }
+}

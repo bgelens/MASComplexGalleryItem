@@ -1,0 +1,355 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Username for the Virtual Machine."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "allowedValues": [
+                "Basic_A0",
+                "Basic_A1",
+                "Basic_A2",
+                "Basic_A3",
+                "Basic_A4",
+                "Standard_A0",
+                "Standard_A1",
+                "Standard_A2",
+                "Standard_A3",
+                "Standard_A4"
+            ],
+            "defaultValue": "Standard_A2"
+        },
+        "vmName": {
+            "type": "string",
+            "maxLength": 15,
+            "minLength": 3,
+            "defaultValue": "MySQLVM"
+        },
+        "sqlPort": {
+            "type": "int",
+            "defaultValue": 1433,
+            "metadata": {
+                "description": "SQL instance port. Port will be opened through NSG."
+            }
+        },
+        "sqlInstanceName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 15,
+            "defaultValue": "MSSQLSERVER",
+            "metadata": {
+                "description": "SQL instance name. MSSQLSERVER will create default instance."
+            }
+        },
+        "sqlDataDiskSize": {
+            "type": "int",
+            "defaultValue": "100",
+            "minValue": 10,
+            "maxValue": 200,
+            "metadata": {
+                "description": "Specify the size of the SQL data disk."
+            }
+        },
+        "sqlLogDiskSize": {
+            "type": "int",
+            "defaultValue": "100",
+            "minValue": 10,
+            "maxValue": 200,
+            "metadata": {
+                "description": "Specify the size of the SQL log disk."
+            }
+        },
+        "sqlFeatures": {
+            "type": "string",
+            "allowedValues": [
+                "SQLENGINE",
+                "IS",
+                "SQLENGINE, IS"
+            ],
+            "metadata": {
+                "description": "Specify the SQL Features you want to install."
+            },
+            "defaultValue": "SQLENGINE"
+        },
+        "sqlAuthenticationMode": {
+            "type": "string",
+            "allowedValues": [
+                "SQL",
+                "Windows"
+            ],
+            "metadata": {
+                "description": "Specify the SQL Authentication mode you want to use for the SQLENGINE feature."
+            },
+            "defaultValue": "SQL"
+        },
+        "sqlPID": {
+            "defaultValue": "",
+            "type": "string"
+        }
+    },
+    "variables": {
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'sqlvm')]",
+        "nicName": "[concat(parameters('vmName'), '_nic')]",
+        "addressPrefix": "10.0.0.0/16",
+        "subnetName": "Subnet",
+        "subnetPrefix": "10.0.0.0/24",
+        "publicIPAddressName": "[concat(parameters('vmName'), '_pip')]",
+        "virtualNetworkName": "[concat(parameters('vmName'), '_vnet')]",
+        "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
+        "networkSecurityGroupName": "[concat(parameters('vmName'), '_nsg')]",
+        "sqlFeatures": "[split(parameters('sqlFeatures'), ',')]",
+        "imagePublisher": "Microsoft",
+        "imageOffer": "WindowsServer",
+        "imageSku": "2016-Standard-Core"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storageAccountName')]",
+            "apiVersion": "2016-01-01",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "Storage",
+            "properties": {}
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIPAddressName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "Dynamic"
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('virtualNetworkName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('networkSecurityGroupName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "default-allow-rdp",
+                        "properties": {
+                            "priority": 1000,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "3389",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    },
+                    {
+                        "name": "default-allow-winrm",
+                        "properties": {
+                            "priority": 1100,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "5985",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    },
+                    {
+                        "name": "default-allow-winrm-ssl",
+                        "properties": {
+                            "priority": 1200,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "5986",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    },
+                    {
+                        "name": "default-allow-sql",
+                        "properties": {
+                            "priority": 1300,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "[parameters('sqlPort')]",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('nicName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]"
+                            },
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('VMSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSKU')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": [
+                        {
+                            "createOption": "Empty",
+                            "lun": 0,
+                            "name": "[concat(parameters('vmName'), '_sqldata')]",
+                            "diskSizeGB": "[parameters('sqlDataDiskSize')]",
+                            "vhd": {
+                                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob, parameters('vmName'), '_sqldata.vhd')]"
+                            }
+                        },
+                        {
+                            "createOption": "Empty",
+                            "lun": 1,
+                            "name": "[concat(parameters('vmName'), '_sqllog')]",
+                            "diskSizeGB": "[parameters('sqlLogDiskSize')]",
+                            "vhd": {
+                                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob, parameters('vmName'), '_sqllog.vhd')]"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'),'/dscExtension')]",
+            "apiVersion": "2015-06-15",
+            "properties": {
+                "autoUpgradeMinorVersion": true,
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.19",
+                "protectedSettings": {
+                    "configurationArguments": {
+                        "SetupCredentials": {
+                            "userName": "[parameters('adminUsername')]",
+                            "password": "[parameters('adminPassword')]"
+                        },
+                        "ProductId": "[parameters('sqlPID')]"
+                    }
+                },
+                "settings": {
+                    "wmfVersion": "latest",
+                    "privacy": {
+                        "dataCollection": "disable"
+                    },
+                    "configuration": {
+                        "url": "https://tenantartifacts.blob.azurestack.local/dsc/SQLConfiguration.ps1.zip",
+                        "script": "SQLConfiguration.ps1",
+                        "function": "SQLConfiguration"
+                    },
+                    "configurationArguments": {
+                        "SQLInstanceName": "[parameters('sqlInstanceName')]",
+                        "Features": "[variables('sqlFeatures')]",
+                        "Port": "[parameters('sqlPort')]",
+                        "SecurityMode": "[parameters('sqlAuthenticationMode')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+            ]
+        }
+    ],
+    "outputs": {}
+}

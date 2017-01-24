@@ -1,0 +1,70 @@
+{
+    "$schema": "https://gallery.azure.com/schemas/2015-10-01/manifest.json#",
+    "name": "SQL2016SP1onServer2016Core",
+    "publisher": "bgelens",
+    "version": "1.0.0",
+    "displayName": "SQL 2016 SP1 on Windows Server 2016 Core",
+    "publisherDisplayName": "@bgelens",
+    "publisherLegalName": "@bgelens",
+    "summary": "Deploys a Windows Server 2016 Core Standard server with SQL Server 2016 SP1 installed.",
+    "longSummary": "ms-resource:longSummary",
+    "description": "ms-resource:description",
+    "uiDefinition": {
+        "path": "UIDefinition.json"
+    },
+    "artifacts": [
+        {
+            "name": "DefaultTemplate",
+            "type": "Template",
+            "path": "DeploymentTemplates\\mainTemplate.json",
+            "isDefault": true
+        },
+        {
+            "name": "CreateUIDefinition",
+            "type": "Custom",
+            "path": "DeploymentTemplates\\CreateUIDefinition.json",
+            "isDefault": false
+        }
+    ],
+    "categories": [
+        "@bgelens"
+    ],
+    "links": [
+        {
+            "displayName": "SQL Gallery Item Git Repository.",
+            "uri": "https://github.com/bgelens/MASComplexGalleryItem"
+        }
+    ],
+    "images": [
+        {
+            "context": "ibiza",
+            "items": [
+                {
+                    "id": "small",
+                    "path": "Images\\Small.png",
+                    "type": "icon"
+                },
+                {
+                    "id": "medium",
+                    "path": "Images\\Medium.png",
+                    "type": "icon"
+                },
+                {
+                    "id": "large",
+                    "path": "Images\\Large.png",
+                    "type": "icon"
+                },
+                {
+                    "id": "wide",
+                    "path": "Images\\Wide.png",
+                    "type": "icon"
+                },
+                {
+                    "id": "screenshot0",
+                    "path": "Images\\Screenshot0.png",
+                    "type": "screenshot"
+                }
+            ]
+        }
+    ]
+}
